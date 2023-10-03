@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "id": "profiles_config.spec.json",
+  "$id": "profiles_config.spec.json",
+  "title": "Profiles config",
+  "description": "Specification for CLI Configuration profiles",
+  "type": "object",
+  "additionalProperties": false,
+  "patternProperties": {
+    "x-": {},
+    "^[a-zA-Z\\d\\-_]+$": {
+      "$ref": "#/definitions/GatewayProfile"
+    }
+  },
+  "properties": {
+  },
+  "definitions": {
+    "GatewayProfile": {
+      "type": "object",
+      "additionalItems": false,
+      "patternProperties": {
+        "x-": {}
+      },
+      "required": [
+        "Url"
+      ],
+      "oneOf": [
+        {
+          "required": [
+            "Username",
+            "Password"
+          ]
+        },
+        {
+          "required": [
+            "AWSSecretsManager"
+          ]
+        }
+      ],
+      "properties": {
+        "Url": {
+          "type": "string",
+          "description": "URL to Conduktor Gateway API Endpoint"
+        },
+        "Username": {
+          "description": "Username to make API Calls",
+          "type": "string",
+          "minLength": 1
+        },
+        "Password": {
+          "description": "The password to make API Calls",
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "AWSSecretsManager": {
+          "description": "Uses AWS SecretsManager to pull details, YAML or JSON, and picks user details from there",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "SecretId": {
+              "type": "string"
+            },
+            "Format": {
+              "type": "string",
+              "enum": [
+                "yaml",
+                "json"
+              ],
+              "default": "yaml"
+            },
+            "Username": {
+              "type": "string",
+              "description": "Username in the defined YAML/JSON Secret to use. If not set, uses first user to have `admin` role"
+            },
+            "ProfileName": {
+              "type": "string",
+              "description": "Allows to specify which local AWS Profile to use to make API calls with"
+            }
+          }
+        }
+      }
+    }
+  }
+}

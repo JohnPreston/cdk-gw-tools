@@ -1,0 +1,134 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "id": "tenant_mappings-input.spec.json",
+  "$id": "tenant_mappings-input.spec.json",
+  "title": "Tenant Mappings config input schema",
+  "description": "Specification for tenant mapping management",
+  "type": "object",
+  "additionalProperties": false,
+  "patternProperties": {
+    "x-": {}
+  },
+  "properties": {
+    "tenant_name": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_\\-\\.]+$"
+    },
+    "ignore_duplicates_conflict": {
+      "type": "boolean",
+      "description": "If true, ignores 409 conflict errors when applying a new mapping."
+    },
+    "mappings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/definitions/TenantMapping"
+      }
+    },
+    "import_from_tenant": {
+      "type": "object",
+      "description": "Allows to define tenants to import topics from in a read-only fashion",
+      "additionalProperties": false,
+      "patternProperties": {
+        "x-": {}
+      },
+      "required": [
+        "include_regex"
+      ],
+      "properties": {
+        "include_regex": {
+          "description": "Defines the tenants and topics to import",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/definitions/TenantMappingImportItem"
+          }
+        },
+        "exclude_regex": {
+          "type": "array",
+          "description": "List of regex that will match the tenant names to exclude from import",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "process_tenant_only_once": {
+          "type": "boolean",
+          "description": ""
+        }
+      }
+    }
+  },
+  "definitions": {
+    "TenantMappingImportItem": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Regular expression"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tenant_regex"
+          ],
+          "properties": {
+            "tenant_regex": {
+              "type": "string",
+              "description": "Regular expression to match tenants"
+            },
+            "import_prefix": {
+              "type": "string",
+              "description": "Optional - When creating the mapping, adds a prefix to the logical topic name"
+            },
+            "grant_write_access": {
+              "type": "boolean",
+              "description": "On import, matched topics will be available in the tenant with write access. NOT RECOMMENDED",
+              "default": false
+            },
+            "logical_topics_include_regexes": {
+              "type": "array",
+              "uniqueItems": true,
+              "description": "List of regex to match tenant logical topics to map",
+              "items": {
+                "type": "string"
+              }
+            },
+            "logical_topics_exclude_regexes": {
+              "type": "array",
+              "uniqueItems": true,
+              "description": "List of regex to match tenant logical topics to exclude in mapping",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "TenantMapping": {
+      "description": "Tenant mapping as defined in the API definition",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "logicalTopicName": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "physicalTopicName": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "readOnly": {
+          "type": "boolean",
+          "description": "Whether the mapping is read-only on the topic. Cannot produce on topic."
+        },
+        "concentrated": {
+          "type": "boolean",
+          "description": "Whether the mapping is concentrated"
+        }
+      }
+    }
+  }
+}

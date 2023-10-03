@@ -1,0 +1,249 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template for the Function to rotate JWT tokens for Conduktor Gateway in AWS Secrets Manager
+Transform:
+  - AWS::Serverless-2016-10-31
+Parameters:
+  PermissionsBoundary:
+    Type: String
+    Default: none
+    Description: IAM Policy ARN to use for PermissionsBoundary if required. Optional.
+  FunctionsPrefix:
+    Type: String
+    Default: none
+  CDKGatewayApiURL:
+    Type: String
+    Description: URL to the API Endpoint of the Conduktor Gateway
+    Default: none
+  NewTokenLifetimeInSeconds:
+    Description: The lifetime in seconds of the new Tenant token.
+    Type: Number
+    MinValue: 1
+  CdkGatewayApiSecretArn:
+    Type: String
+    Description: ARN of the CDK Gateway master secret containing the admin user
+    Default: none
+  CdkGatewayApiSecretRoleArn:
+    Type: String
+    Description: ARN of IAM Role to assume in order to retrieve the Conduktor GW API Secret or invoke the central function
+    Default: none
+  VpcId:
+    Type: String
+    Description: VPC To run the function into
+    Default: none
+  SubnetIds:
+    Type: CommaDelimitedList
+    Description: Subnets to run the lambda function from.
+    Default: none
+  TokenRetrievalFunctionARN:
+    Type: String
+    Default: none
+    Description: Function ARN that will make API Calls to Conduktor Gateway
+  DependenciesLayerArn:
+    Type: String
+    Default: none
+    Description: If the layer for the dependencies is already available, set the ARN here to use.
+Conditions:
+  OverrideFunctionName:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: FunctionsPrefix
+          - none
+  PermissionsBoundaryCon:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: PermissionsBoundary
+          - none
+  UseIamRoleForCdkGWApiSecret:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: CdkGatewayApiSecretRoleArn
+          - none
+  CreateNewLayer:
+    Fn::Equals:
+      - Ref: DependenciesLayerArn
+      - none
+  NotUseCentralFunction:
+    Fn::Equals:
+      - Ref: TokenRetrievalFunctionARN
+      - none
+  UseCentralFunction:
+    Fn::Not:
+      - Condition: NotUseCentralFunction
+Resources:
+  LambdaLayer:
+    Condition: CreateNewLayer
+    DependsOn:
+      - tenantTokenRotationFunctionRole
+    Type: AWS::Serverless::LayerVersion
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      CompatibleRuntimes:
+        - python3.10
+      ContentUri: ./layer
+      Description: Dependencies for CDK-GW-TenantTokenRotation
+      LayerName: cdk_gw_rotation_deps
+  functionsSecurityGroup:
+    Condition: NotUseCentralFunction
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription:
+        Fn::Sub: cfn_kafka_admin Functions SG in ${AWS::StackName}
+      VpcId:
+        Ref: VpcId
+  tenantTokenRotationFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Condition:
+              Bool:
+                aws:SecureTransport: 'true'
+            Effect: Allow
+            Principal:
+              Service:
+                - Fn::Sub: lambda.${AWS::URLSuffix}
+        Version: '2012-10-17'
+      Policies:
+        - PolicyName: Rotation
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: KafkaSecretRotation
+                Effect: Allow
+                Action:
+                  - secretsmanager:DescribeSecret
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:PutSecretValue
+                  - secretsmanager:UpdateSecretVersionStage
+                Resource:
+                  - Fn::Sub: arn:aws:secretsmanager:*:${AWS::AccountId}:*
+        - Fn::If:
+            - UseIamRoleForCdkGWApiSecret
+            - PolicyName: CrossAccountAccess
+              PolicyDocument:
+                Version: '2012-10-17'
+                Statement:
+                  - Sid: MasterSecretAssumeRole
+                    Effect: Allow
+                    Action:
+                      - sts:AssumeRole
+                    Resource:
+                      - Ref: CdkGatewayApiSecretRoleArn
+            - Ref: AWS::NoValue
+        - Fn::If:
+            - NotUseCentralFunction
+            - PolicyName: CDKGatewayAPIUsersSecretsAccess
+              PolicyDocument:
+                Version: '2012-10-17'
+                Statement:
+                  - Sid: MasterSecretAccess
+                    Action:
+                      - secretsmanager:GetSecretValue
+                    Effect: Allow
+                    Resource:
+                      - Ref: CdkGatewayApiSecretArn
+            - PolicyName: InvokeCentralFunction
+              PolicyDocument:
+                Version: '2012-10-17'
+                Statement:
+                  - Sid: InvokeFunction
+                    Action:
+                      - lambda:invoke
+                    Effect: Allow
+                    Resource:
+                      - Ref: TokenRetrievalFunctionARN
+      Description:
+        Fn::Sub: tenantTokenRotationFunctionRole-${AWS::StackName}
+      PermissionsBoundary:
+        Fn::If:
+          - PermissionsBoundaryCon
+          - Ref: PermissionsBoundary
+          - Ref: AWS::NoValue
+  tenantTokenRotationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Tags:
+        Name:
+          Fn::If:
+            - OverrideFunctionName
+            - Fn::Sub: ${FunctionsPrefix}-CDK-GW-TenantTokenRotation
+            - CDK-GW-TenantTokenRotation
+      FunctionName:
+        Fn::If:
+          - OverrideFunctionName
+          - Fn::Sub: ${FunctionsPrefix}-CDK-GW-TenantTokenRotation
+          - CDK-GW-TenantTokenRotation
+      Runtime: python3.10
+      Environment:
+        Variables:
+          CDK_API_ENDPOINT:
+            Ref: CDKGatewayApiURL
+          NEW_TOKEN_LIFETIME_IN_SECONDS:
+            Ref: NewTokenLifetimeInSeconds
+          CDK_API_SECRET_ARN:
+            Ref: CdkGatewayApiSecretArn
+          CDK_API_SECRET_ARN_ROLE:
+            Fn::If:
+              - UseIamRoleForCdkGWApiSecret
+              - Ref: CdkGatewayApiSecretRoleArn
+              - Ref: AWS::NoValue
+          GW_ROTATION_MANAGER_FUNCTION_ARN:
+            Fn::If:
+              - UseCentralFunction
+              - Ref: TokenRetrievalFunctionARN
+              - Ref: AWS::NoValue
+      Handler: function.lambda_handler
+      Timeout: 180
+      Role:
+        Fn::GetAtt:
+          - tenantTokenRotationFunctionRole
+          - Arn
+      VpcConfig:
+        Fn::If:
+          - UseCentralFunction
+          - Ref: AWS::NoValue
+          - SecurityGroupIds:
+              - Fn::GetAtt:
+                  - functionsSecurityGroup
+                  - GroupId
+            SubnetIds:
+              Ref: SubnetIds
+      Layers:
+        - Fn::If:
+            - CreateNewLayer
+            - Ref: LambdaLayer
+            - Ref: DependenciesLayerArn
+      CodeUri: |
+        #!/usr/bin/env python
+        from cdk_gw_tools.aws.secrets_rotation import lambda_handler as handler
+
+
+        def lambda_handler(event, context):
+            return handler(event, context)
+
+  SecretsManagerFunctionAccessAuthorization:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - tenantTokenRotationFunction
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: tenantTokenRotationFunction
+      Principal:
+        Fn::Sub: secretsmanager.${AWS::URLSuffix}
+Outputs:
+  FunctionArn:
+    Value:
+      Fn::GetAtt:
+        - tenantTokenRotationFunction
+        - Arn
+  RoleArn:
+    Value:
+      Fn::GetAtt:
+        - tenantTokenRotationFunctionRole
+        - Arn

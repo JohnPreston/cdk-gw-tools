@@ -72,7 +72,7 @@ tag_template = "v{new_version}"
 src = "pyproject.toml"
 
 [[tool.tbump.file]]
-src = "cdk_proxy_api_client/__init__.py"
+src = "cdk_gw_tools/__init__.py"
 
 [tool.black]
 line-length = 88

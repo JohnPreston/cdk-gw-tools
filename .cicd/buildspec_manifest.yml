@@ -1,0 +1,110 @@
+version: 0.2
+env:
+  shell: /bin/bash
+  variables:
+    USE_EPOCH: 0
+    PUBLIC_REGISTRY: public.ecr.aws/johnpreston
+    DOCKER_CLI_EXPERIMENTAL: enabled
+    REPOSITORY_NAME: cdk-gw-cli
+    TAG_RELEASE: 0
+
+batch:
+  fast-fail: false
+  build-graph:
+    - identifier: amd64
+      env:
+        compute-type: BUILD_GENERAL1_SMALL
+        privileged-mode: true
+        variables:
+          VERSION: 3.10
+          ARCH: amd64
+      buildspec: .cicd/buildspec_image.yml
+
+    - identifier: arm64v8
+      env:
+        type: ARM_CONTAINER
+        image: aws/codebuild/amazonlinux2-aarch64-standard:2.0
+        compute-type: BUILD_GENERAL1_LARGE
+        privileged-mode: true
+        variables:
+          ARCH: arm64v8
+          VERSION: 3.10
+      buildspec: .cicd/buildspec_image.yml
+
+    - identifier: manifest
+      env:
+        compute-type: BUILD_GENERAL1_SMALL
+        privileged-mode: true
+      depend-on:
+        - amd64
+        - arm64v8
+
+phases:
+  install:
+    commands:
+      - if [ -z ${AWS_ACCOUNT_ID+x} ]; then AWS_ACCOUNT_ID=$(aws sts get-caller-identity | jq -r .Account); fi
+      - REGISTRY_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION:-$AWS_DEFAULT_REGION}.amazonaws.com
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${REGISTRY_URI}
+      - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${PUBLIC_REGISTRY}
+      - if ! [ -z ${CODEBUILD_RESOLVED_SOURCE_VERSION+x} ]; then COMMIT_HASH=${CODEBUILD_RESOLVED_SOURCE_VERSION::7}; fi
+      - EPOCH=`date +'%Y%m%d'`
+      - SUFFIX=${COMMIT_HASH:=$EPOCH}
+      - if [ $USE_EPOCH -eq 1 ]; then SUFFIX=$EPOCH; fi
+      - |
+          if ! [ -z "${CODEBUILD_WEBHOOK_TRIGGER+x}" ]; then
+            echo TRIGGER is $CODEBUILD_WEBHOOK_TRIGGER
+            PRE=`echo $CODEBUILD_WEBHOOK_TRIGGER|cut -d '/' -f 1`;
+            echo PRE is $PRE
+            echo SUFFIX is $SUFFIX
+            if [ "${PRE}" == "tag" ]; then SUFFIX=`echo $CODEBUILD_WEBHOOK_TRIGGER|cut -d '/' -f 2`; TAG_RELEASE=1 ; fi
+          fi
+      - echo SUFFIX ends up being $SUFFIX
+  build:
+    commands:
+      - |
+          for VERSION in py38 py39 py310; do
+            for ARCH in "amd64" "arm64v8"; do
+              TAG=${SUFFIX}-${VERSION}-${ARCH}
+              echo TAG is $TAG
+
+              echo Publish from ${REGISTRY_URI}/{REPOSITORY_NAME}:${TAG} to ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${TAG}
+              docker pull ${REGISTRY_URI}/${REPOSITORY_NAME}:${TAG}
+              docker tag  ${REGISTRY_URI}/${REPOSITORY_NAME}:${TAG} ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${TAG}
+              docker push ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${TAG}
+            done
+          done
+
+      - docker manifest create ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}
+          --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py38-amd64
+          --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py38-arm64v8
+          --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py39-amd64
+          --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py39-arm64v8
+          --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py310-amd64
+          --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py310-arm64v8
+      - docker manifest push ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}
+
+      - |
+          if ! [ $TAG_RELEASE -eq 1 ]; then
+            docker manifest create ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:nightly        \
+                  --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py38-amd64    \
+                  --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py38-arm64v8  \
+                  --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py39-amd64    \
+                  --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py39-arm64v8  \
+                  --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py310-amd64   \
+                  --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py310-arm64v8 ;
+
+            docker manifest push ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:nightly
+          else
+            docker manifest create ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:latest         \
+                  --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py38-amd64    \
+                  --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py38-arm64v8  \
+                  --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py39-amd64    \
+                  --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py39-arm64v8  \
+                  --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py310-amd64   \
+                  --amend ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:${SUFFIX}-py310-arm64v8 ;
+
+            docker manifest push ${PUBLIC_REGISTRY}/${REPOSITORY_NAME}:latest
+          fi
+
+    finally:
+      - rm -rfv ~/.docker

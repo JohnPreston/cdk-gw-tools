@@ -1,0 +1,21 @@
+---
+# Docker compose file for the purpose of building images
+version: "3.8"
+services:
+  py39:
+    build:
+      dockerfile: cli.Dockerfile
+      context: ../
+      args:
+        SRC_TAG: "3.9.20220212"
+        ARCH: "-${ARCH}"
+    image: ${REGISTRY_URI}cdk-gw-cli:${SUFFIX:-main}-py39-${ARCH}
+
+  py310:
+    build:
+      dockerfile: cli.Dockerfile
+      context: ../
+      args:
+        SRC_TAG: "3.10.20220212"
+        ARCH: "-${ARCH}"
+    image: ${REGISTRY_URI}cdk-gw-cli:${SUFFIX:-main}-py310-${ARCH}

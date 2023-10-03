@@ -1,0 +1,237 @@
+Description: Pipeline to release Lambda layers publicly when new release is created
+Metadata:
+  Author: https://github.com/johnpreston
+Parameters:
+  RepositoryOrganization:
+    Type: String
+  RepositoryProvider:
+    Type: String
+    AllowedValues:
+      - GitHub
+      - CodeCommit
+    Default: GitHub
+  RepositoryName:
+    Type: String
+  ReferenceBranchName:
+    Type: String
+    Default: main
+  BuildLogsRetentionDays:
+    Type: Number
+    AllowedValues:
+      - 1
+      - 3
+      - 5
+      - 7
+      - 14
+      - 30
+      - 60
+      - 90
+      - 120
+      - 150
+      - 180
+      - 365
+      - 400
+      - 545
+      - 731
+      - 1827
+      - 3653
+    Default: 14
+  NightlyDocsBucket:
+    Type: String
+  NightlyDocsDistribution:
+    Type: String
+  DocsBucket:
+    Type: String
+  DocsDistribution:
+    Type: String
+  BuildspecFile:
+    Type: String
+    Default: .cicd/buildspec_docs.yml
+Conditions:
+  UseGitHub:
+    Fn::Equals:
+      - Ref: RepositoryProvider
+      - GitHub
+  UseCodeCommit:
+    Fn::Equals:
+      - Ref: RepositoryProvider
+      - CodeCommit
+Resources:
+  BuildLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: codebuild/docs/${RepositoryName}
+      RetentionInDays:
+        Ref: BuildLogsRetentionDays
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - Fn::Sub: codebuild.${AWS::URLSuffix}
+      Policies:
+        - PolicyName: ContentAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: S3ObjectsAccess
+                Action:
+                  - s3:PutObject*
+                  - s3:GetObject*
+                Effect: Allow
+                Resource:
+                  - Fn::Sub: arn:${AWS::Partition}:s3:::${DocsBucket}/*
+                  - Fn::Sub: arn:${AWS::Partition}:s3:::${NightlyDocsBucket}/*
+              - Sid: S3BucketAccess
+                Action:
+                  - s3:ListBucket
+                Effect: Allow
+                Resource:
+                  - Fn::Sub: arn:${AWS::Partition}:s3:::${DocsBucket}
+                  - Fn::Sub: arn:${AWS::Partition}:s3:::${NightlyDocsBucket}
+              - Sid: CloudWatchLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - Fn::Sub: ${BuildLogsGroup.Arn}
+              - Sid: CloudFrontAccess
+                Effect: Allow
+                Action:
+                  - cloudfront:CreateInvalidation
+                Resource:
+                  - Fn::Sub: arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${DocsDistribution}
+                  - Fn::Sub: arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${NightlyDocsDistribution}
+  NightlyDocsBuild:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name:
+        Fn::Sub: docs-nightly-${RepositoryName}
+      ServiceRole:
+        Fn::GetAtt:
+          - CodeBuildRole
+          - Arn
+      Description:
+        Fn::Sub: Publishes blog on updates
+      LogsConfig:
+        CloudWatchLogs:
+          GroupName:
+            Ref: BuildLogsGroup
+          Status: ENABLED
+          StreamName: nightlydocs
+      BadgeEnabled: true
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:3.0
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: PY_VERSION
+            Type: PLAINTEXT
+            Value: 3.8
+          - Name: DISTRIBUTION_ID
+            Type: PLAINTEXT
+            Value:
+              Ref: NightlyDocsDistribution
+          - Name: NIGHTLY_DOCS_BUCKET
+            Type: PLAINTEXT
+            Value:
+              Ref: NightlyDocsBucket
+      Source:
+        Type: GITHUB
+        ReportBuildStatus: true
+        Location:
+          Fn::If:
+            - UseGitHub
+            - Fn::Sub: https://github.com/${RepositoryOrganization}/${RepositoryName}
+            - Fn::Sub: https://codecommit.${AWS::Region}.${AWS::URLSuffix}
+        InsecureSsl: false
+        BuildSpec:
+          Ref: BuildspecFile
+      Triggers:
+        Webhook: true
+        FilterGroups:
+          - - Type: EVENT
+              Pattern: PULL_REQUEST_MERGED
+              ExcludeMatchedPattern: false
+            - Type: HEAD_REF
+              Pattern: ^refs/heads/.*$
+              ExcludeMatchedPattern: false
+            - Type: HEAD_REF
+              Pattern:
+                Fn::Sub: ^refs/heads/${ReferenceBranchName}$
+              ExcludeMatchedPattern: false
+  ReleaseDocsBuild:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name:
+        Fn::Sub: docs-release-${RepositoryName}
+      ServiceRole:
+        Fn::GetAtt:
+          - CodeBuildRole
+          - Arn
+      Description:
+        Fn::Sub: Publishes blog on updates
+      LogsConfig:
+        CloudWatchLogs:
+          GroupName:
+            Ref: BuildLogsGroup
+          Status: ENABLED
+          StreamName: docs
+      BadgeEnabled: true
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:3.0
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: PY_VERSION
+            Type: PLAINTEXT
+            Value: 3.8
+          - Name: DISTRIBUTION_ID
+            Type: PLAINTEXT
+            Value:
+              Ref: DocsDistribution
+          - Name: DOCS_BUCKET
+            Type: PLAINTEXT
+            Value:
+              Ref: DocsBucket
+      Source:
+        Type: GITHUB
+        ReportBuildStatus: true
+        Location:
+          Fn::If:
+            - UseGitHub
+            - Fn::Sub: https://github.com/${RepositoryOrganization}/${RepositoryName}
+            - Fn::Sub: https://codecommit.${AWS::Region}.${AWS::URLSuffix}
+        InsecureSsl: false
+        BuildSpec:
+          Ref: BuildspecFile
+      Triggers:
+        Webhook: true
+        FilterGroups:
+          - - Type: EVENT
+              Pattern: PUSH
+              ExcludeMatchedPattern: false
+            - Type: HEAD_REF
+              Pattern: ^refs/heads/.*$
+              ExcludeMatchedPattern: false
+            - Type: HEAD_REF
+              Pattern: ^refs/tags/v.*$
+              ExcludeMatchedPattern: false
+            - Type: HEAD_REF
+              Pattern:
+                Fn::Sub: ^refs/heads/${ReferenceBranchName}$
+              ExcludeMatchedPattern: false

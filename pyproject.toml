@@ -21,7 +21,7 @@ classifiers = [
 ]
 
 include = [
-    "cdk_proxy_api_client/**/*.json",
+    "cdk_gw_tools/**/*.json",
 ]
 
 exclude = ["*.pyc", "*~", "*pycache*"]

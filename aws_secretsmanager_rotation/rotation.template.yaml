@@ -197,7 +197,7 @@ Resources:
               - UseCentralFunction
               - Ref: TokenRetrievalFunctionARN
               - Ref: AWS::NoValue
-      Handler: function.lambda_handler
+      Handler: index.lambda_handler
       Timeout: 180
       Role:
         Fn::GetAtt:
@@ -218,8 +218,7 @@ Resources:
             - CreateNewLayer
             - Ref: LambdaLayer
             - Ref: DependenciesLayerArn
-      CodeUri: |
-        #!/usr/bin/env python
+      InlineCode: |
         from cdk_gw_tools.aws.secrets_rotation import lambda_handler as handler
 
 

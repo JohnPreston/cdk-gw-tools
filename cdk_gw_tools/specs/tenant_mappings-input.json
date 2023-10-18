@@ -25,6 +25,15 @@
         "$ref": "#/definitions/TenantMapping"
       }
     },
+    "interceptors": {
+      "additionalProperties": false,
+      "uniqueItems": true,
+      "patternProperties": {
+        "^[a-zA-Z0-9\\-]+$": {
+          "$ref": "#/definitions/Interceptor"
+        }
+      }
+    },
     "import_from_tenant": {
       "type": "object",
       "description": "Allows to define tenants to import topics from in a read-only fashion",
@@ -61,6 +70,42 @@
     }
   },
   "definitions": {
+    "Interceptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "config",
+        "pluginClass",
+        "priority"
+      ],
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "Optional - The username to apply the interceptor for"
+        },
+        "pluginClass": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "number",
+          "minimum": 1,
+          "default": 100
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "topic"
+          ],
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Regular expression or topic name to apply the configuration to"
+            }
+          }
+        }
+      }
+    },
     "TenantMappingImportItem": {
       "oneOf": [
         {

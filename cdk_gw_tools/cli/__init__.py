@@ -199,6 +199,17 @@ def interceptors_actions(proxy: ProxyClient, action: str, **kwargs):
             set_else_none("vcluster_username", kwargs, None),
         )
         return _req
+    elif action == "import-from-config":
+        _loaded_config = load_config_file(kwargs["InputConfigFile"])
+        if not keyisset("interceptors", _loaded_config):
+            return
+        from cdk_gw_tools.cli_tools.set_update_interceptors import (
+            set_update_interceptors,
+        )
+
+        _req = set_update_interceptors(
+            proxy, kwargs["vcluster_name"], _loaded_config["interceptors"]
+        )
     return None
 
 

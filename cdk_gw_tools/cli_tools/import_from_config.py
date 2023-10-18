@@ -22,6 +22,8 @@ from compose_x_common.compose_x_common import keyisset, set_else_none
 from importlib_resources import files as pkg_files
 from jsonschema import validate
 
+from cdk_gw_tools.cli_tools import load_config_file
+
 DEFAULT_SCHEMA_PATH = pkg_files("cdk_gw_tools").joinpath(
     "specs/profiles_config.spec.json"
 )
@@ -35,19 +37,7 @@ def import_clients(
     It returns a mapping with the profile name and the associated client.
     If client is set, only cares about that one client
     """
-    with open(config_file) as file_fd:
-        raw_content = file_fd.read()
-        try:
-            content = yaml.load(raw_content, Loader=Loader)
-        except yaml.YAMLError:
-            try:
-                content = json.loads(raw_content)
-            except json.JSONDecodeError:
-                raise ValueError(
-                    "Content of file {} is neither valid YAML not JSON".format(
-                        config_file
-                    )
-                )
+    content = load_config_file(config_file)
     if not schema:
         schema = loads(DEFAULT_SCHEMA_PATH.read_text())
     validate(content, schema)

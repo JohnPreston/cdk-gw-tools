@@ -61,3 +61,16 @@ def set_interceptors_actions_parsers(vclusters_subparsers):
         required=True,
         help="Interceptor name to delete as seen in the vCluster.",
     )
+    import_from_config_parser = interceptors_subparsers.add_parser(
+        name="import-from-config",
+        help="Import interceptors from config file",
+        parents=[USERNAME_PARSER],
+    )
+    import_from_config_parser.add_argument(
+        "-f",
+        "--config-file",
+        dest="InputConfigFile",
+        type=str,
+        help="Path to the config file (YAML)",
+        required=True,
+    )

@@ -19,6 +19,7 @@ except ImportError:
 from cdk_proxy_api_client.interceptors import Interceptors
 from cdk_proxy_api_client.plugins import Plugins
 from cdk_proxy_api_client.proxy_api import ApiClient, ProxyClient
+from cdk_proxy_api_client.usermappings import UserMappings
 from cdk_proxy_api_client.vclusters import VirturalClusters
 from compose_x_common.compose_x_common import keyisset, set_else_none
 from requests import Response
@@ -88,9 +89,28 @@ def vclusters_actions(proxy: ProxyClient, action: str, **kwargs):
         )
     elif action == "interceptors":
         req = interceptors_actions(proxy, kwargs.pop("sub_action"), **kwargs)
+    elif action == "user-mappings":
+        req = user_mappings_actions(proxy, kwargs.pop("sub_action"), **kwargs)
     else:
         raise NotImplementedError(f"Action {action} not yet implemented.")
     return req
+
+
+def user_mappings_actions(proxy: ProxyClient, action: str, **kwargs):
+    """
+    Handles vCluster OAuth mappings actions
+    """
+    user_mappings = UserMappings(proxy)
+    if action == "list":
+        return user_mappings.list_mappings(kwargs["vcluster_name"])
+    elif action == "create":
+        return user_mappings.create_mapping(kwargs["vcluster_name"], kwargs["username"])
+    elif action == "delete":
+        return user_mappings.delete_mapping(kwargs["vcluster_name"], kwargs["username"])
+    else:
+        raise NotImplementedError(
+            f"Action {action} not yet implemented for user mappings."
+        )
 
 
 def auth_actions(vcluster: VirturalClusters, action: str, **kwargs):
@@ -178,7 +198,17 @@ def interceptors_actions(proxy: ProxyClient, action: str, **kwargs):
 
     _interceptor_client = Interceptors(proxy)
     if action == "list":
-        return _interceptor_client.list_all_interceptors()
+        _interceptors = _interceptor_client.list_vcluster_interceptors(
+            vcluster_name=kwargs["vcluster_name"], as_list=True
+        )
+        if keyisset("IgnoreReadOnly", kwargs):
+            return [
+                _interceptor
+                for _interceptor in _interceptors.values()
+                if _interceptor["pluginClass"]
+                != "io.conduktor.gateway.interceptor.safeguard.ReadOnlyTopicPolicyPlugin"
+            ]
+        return _interceptors
     elif action == "create-update":
         with open(kwargs["config"]) as config_fd:
             config_raw = config_fd.read()

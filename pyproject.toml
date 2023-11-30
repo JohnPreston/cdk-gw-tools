@@ -33,7 +33,7 @@ exclude = ["*.pyc", "*~", "*pycache*"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-cdk-proxy-api-client = "^0.6"
+cdk-proxy-api-client = "^0.7"
 compose-x-common = "^1.4.1"
 jsonschema = "4.19.1"
 importlib-resources = "^6.1.0"

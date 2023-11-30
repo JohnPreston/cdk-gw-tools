@@ -27,7 +27,7 @@ def set_interceptors_actions_parsers(vclusters_subparsers):
 
     interceptors_parser = vclusters_subparsers.add_parser(
         name="interceptors",
-        help="List vCluster interceptors",
+        help="Manage vCluster interceptors",
         parents=[VCLUSTER_PARSER],
     )
     interceptors_subparsers = interceptors_parser.add_subparsers(dest="sub_action")
@@ -35,6 +35,12 @@ def set_interceptors_actions_parsers(vclusters_subparsers):
         name="list",
         help="List interceptors for vcluster/username",
         parents=[USERNAME_PARSER],
+    )
+    list_parser.add_argument(
+        "--ignore-readonly",
+        action="store_true",
+        help="Ignore the read only interceptors",
+        dest="IgnoreReadOnly",
     )
     create_parser = interceptors_subparsers.add_parser(
         name="create-update",

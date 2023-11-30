@@ -45,7 +45,7 @@ def set_parser():
         help="Manages vClusters",
     )
     vclusters_subparsers = vclusters_parser.add_subparsers(
-        dest="action", help="vCluster tokens management"
+        dest="action", help="vCluster management"
     )
     set_vclusters_actions_parsers(vclusters_subparsers)
 

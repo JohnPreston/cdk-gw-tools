@@ -37,6 +37,7 @@ cdk-proxy-api-client = "^0.7"
 compose-x-common = "^1.4.1"
 jsonschema = "4.19.1"
 importlib-resources = "^6.1.0"
+pyyaml = "^6.0"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.1.1"
@@ -44,7 +45,6 @@ black = "^23.9"
 isort = "^5.12"
 pyupgrade = "^3.3.1"
 tbump = "^6.9.0"
-pyyaml = "^6.0"
 
 [tool.poetry.scripts]
 cdk-cli = "cdk_gw_tools.cli:main"

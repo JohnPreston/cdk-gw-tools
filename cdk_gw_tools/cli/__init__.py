@@ -6,8 +6,6 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from os import path
-from typing import Union
 
 import yaml
 
@@ -16,231 +14,16 @@ try:
 except ImportError:
     from yaml import CDumper as Dumper
 
-from cdk_proxy_api_client.interceptors import Interceptors
-from cdk_proxy_api_client.plugins import Plugins
 from cdk_proxy_api_client.proxy_api import ApiClient, ProxyClient
-from cdk_proxy_api_client.usermappings import UserMappings
-from cdk_proxy_api_client.vclusters import VirturalClusters
-from compose_x_common.compose_x_common import keyisset, set_else_none
-from requests import Response
 
+from cdk_gw_tools.cli.actions import format_return
+from cdk_gw_tools.cli.actions.plugins import plugins_actions
+from cdk_gw_tools.cli.actions.user_mappings import gw_user_mappings_actions
+from cdk_gw_tools.cli.actions.vclusters import vclusters_actions
+from cdk_gw_tools.cli.actions.vclusters.interceptors import interceptors_actions
 from cdk_gw_tools.cli.main_parser import set_parser
-from cdk_gw_tools.cli_tools import load_config_file
 from cdk_gw_tools.cli_tools.import_from_config import import_clients
-from cdk_gw_tools.cli_tools.import_tenants_mappings import import_tenants_mappings
 from cdk_gw_tools.common.logging import LOG
-
-
-def format_return(function):
-    """
-    Decorator to evaluate the requests payload returned
-    """
-
-    def wrapped_answer(*args, **kwargs):
-        """
-        Decorator wrapper
-        """
-        req = function(*args, **kwargs)
-        if isinstance(req, Response):
-            try:
-                return req.json()
-            except Exception as error:
-                print("request response not in JSON")
-                print(error)
-                return req.text
-        return req
-
-    return wrapped_answer
-
-
-def format_vcluster_mappings_list(
-    vcluster_name: str, req: list, options: dict
-) -> Union[dict, list]:
-    """Parses options to manipulate the returned list/dict"""
-    mappings_list: list = []
-    for _mapping in req:
-        if keyisset("no_concentrated", options):
-            if not keyisset("concentrated", _mapping):
-                mappings_list.append(_mapping)
-        elif keyisset("mapped_only", options):
-            if not (
-                keyisset("concentrated", _mapping)
-                or _mapping["physicalTopicName"].startswith(vcluster_name)
-            ):
-                mappings_list.append(_mapping)
-        else:
-            mappings_list.append(_mapping)
-    if keyisset("as_import_config", options):
-        return {"tenant": vcluster_name, "mappings": mappings_list}
-    return mappings_list
-
-
-@format_return
-def vclusters_actions(proxy: ProxyClient, action: str, **kwargs):
-    """Manages execution of vClusters"""
-    vclusters = VirturalClusters(proxy)
-    if action == "list":
-        req = vclusters.list_vclusters(as_list=True)
-    elif action == "auth":
-        req = auth_actions(vclusters, kwargs.pop("sub_action"), **kwargs)
-    elif action == "mappings":
-        req = tenant_mappings_actions(
-            proxy, vclusters, kwargs.pop("sub_action"), **kwargs
-        )
-    elif action == "interceptors":
-        req = interceptors_actions(proxy, kwargs.pop("sub_action"), **kwargs)
-    elif action == "user-mappings":
-        req = user_mappings_actions(proxy, kwargs.pop("sub_action"), **kwargs)
-    else:
-        raise NotImplementedError(f"Action {action} not yet implemented.")
-    return req
-
-
-def user_mappings_actions(proxy: ProxyClient, action: str, **kwargs):
-    """
-    Handles vCluster OAuth mappings actions
-    """
-    user_mappings = UserMappings(proxy)
-    if action == "list":
-        return user_mappings.list_mappings(kwargs["vcluster_name"])
-    elif action == "create":
-        return user_mappings.create_mapping(kwargs["vcluster_name"], kwargs["username"])
-    elif action == "delete":
-        return user_mappings.delete_mapping(kwargs["vcluster_name"], kwargs["username"])
-    else:
-        raise NotImplementedError(
-            f"Action {action} not yet implemented for user mappings."
-        )
-
-
-def auth_actions(vcluster: VirturalClusters, action: str, **kwargs):
-    """Manages actions for auth vClusters subparser"""
-    username = kwargs.get("username") or kwargs["vcluster_name"]
-    if action == "create":
-        req = vcluster.create_vcluster_user_token(
-            vcluster=kwargs.get("vcluster_name"),
-            username=username,
-            lifetime_in_seconds=int(kwargs.get("token_lifetime_in_seconds")),
-            token_only=keyisset("token_only", kwargs),
-        )
-    else:
-        raise NotImplementedError(f"Action {action} not yet implemented.")
-    if keyisset("as_kafka_config", kwargs):
-        req = req.json()
-        return """security.protocol=SASL_SSL
-sasl.mechanism=PLAIN
-sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="{}" password="{}";
-client.id=CLI_{}""".format(
-            username, req["token"], username
-        )
-    return req
-
-
-def tenant_mappings_actions(
-    proxy: ProxyClient, vcluster: VirturalClusters, action: str, **kwargs
-):
-    """Manages actions for mappings vClusters actions"""
-
-    vcluster_name = set_else_none("vcluster_name", kwargs)
-    if action == "list":
-        req = format_vcluster_mappings_list(
-            vcluster_name,
-            vcluster.list_vcluster_topic_mappings(vcluster_name).json(),
-            kwargs,
-        )
-    elif action == "import-from-vclusters-config":
-        content = load_config_file(path.abspath(kwargs["import_config_file"]))
-        req = import_tenants_mappings(proxy, content, vcluster_name)
-    elif action == "create":
-        req = vcluster.create_vcluster_topic_mapping(
-            vcluster=vcluster_name,
-            logical_topic_name=kwargs["logical_topic_name"],
-            physical_topic_name=kwargs["physical_topic_name"],
-            read_only=keyisset("ReadOnly", kwargs),
-            concentrated=keyisset("concentrated", kwargs),
-            cluster_id=kwargs.get("cluster_id"),
-        )
-    elif action == "import-from-tenant":
-        source_tenant = kwargs.pop("source_tenant")
-        content = {
-            "vcluster_name": vcluster_name,
-            "mappings": [],
-            "ignore_duplicates_conflict": True,
-            "import_from_tenant": {"include_regex": [rf"^{source_tenant}$"]},
-        }
-        req = import_tenants_mappings(proxy, content, vcluster_name)
-    elif action == "delete-topic-mapping":
-        to_delete = kwargs.pop("logicalTopicName")
-        req = vcluster.delete_vcluster_topic_mapping(
-            vcluster=vcluster_name, logical_topic_name=to_delete
-        )
-    elif action == "delete-all-mappings":
-        req = vcluster.delete_vcluster_topics_mappings(vcluster_name)
-    else:
-        raise NotImplementedError(f"Action {action} not yet implemented.")
-    return req
-
-
-@format_return
-def plugins_actions(proxy: ProxyClient, action: str, **kwargs):
-    _plugins = Plugins(proxy)
-    if action == "list":
-        req = _plugins.list_all_plugins(
-            extended=keyisset("extended", kwargs), as_list=keyisset("as_list", kwargs)
-        )
-    else:
-        raise NotImplementedError(f"Action {action} is not implemented yet.")
-    return req
-
-
-def interceptors_actions(proxy: ProxyClient, action: str, **kwargs):
-    """Triggers function according to CLI Input"""
-
-    _interceptor_client = Interceptors(proxy)
-    if action == "list":
-        _interceptors = _interceptor_client.list_vcluster_interceptors(
-            vcluster_name=kwargs["vcluster_name"], as_list=True
-        )
-        if keyisset("IgnoreReadOnly", kwargs):
-            return [
-                _interceptor
-                for _interceptor in _interceptors.values()
-                if _interceptor["pluginClass"]
-                != "io.conduktor.gateway.interceptor.safeguard.ReadOnlyTopicPolicyPlugin"
-            ]
-        return _interceptors
-    elif action == "create-update":
-        with open(kwargs["config"]) as config_fd:
-            config_raw = config_fd.read()
-            config_json = json.loads(config_raw)
-        _req = _interceptor_client.create_vcluster_interceptor(
-            vcluster_name=kwargs["vcluster_name"],
-            interceptor_name=config_json["name"],
-            plugin_class=config_json["pluginClass"],
-            priority=config_json["priority"],
-            config=config_json["config"],
-            username=set_else_none("vcluster_username", kwargs, None),
-        )
-        return _req
-    elif action == "delete":
-        _req = _interceptor_client.delete_vcluster_interceptor(
-            kwargs["vcluster_name"],
-            kwargs["interceptor_name"],
-            set_else_none("vcluster_username", kwargs, None),
-        )
-        return _req
-    elif action == "import-from-config":
-        _loaded_config = load_config_file(kwargs["InputConfigFile"])
-        if not keyisset("interceptors", _loaded_config):
-            return
-        from cdk_gw_tools.cli_tools.set_update_interceptors import (
-            set_update_interceptors,
-        )
-
-        _req = set_update_interceptors(
-            proxy, kwargs["vcluster_name"], _loaded_config["interceptors"]
-        )
-    return None
 
 
 def main():
@@ -289,6 +72,7 @@ def main():
     _categories_mappings: dict = {
         "vclusters": vclusters_actions,
         "plugins": plugins_actions,
+        "user-mappings": gw_user_mappings_actions,
     }
     dest_function = _categories_mappings[_category]
     response = dest_function(_proxy, _action, **_vars)

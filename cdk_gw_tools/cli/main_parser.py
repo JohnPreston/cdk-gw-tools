@@ -6,7 +6,10 @@ from __future__ import annotations
 from argparse import ArgumentParser
 from os import environ
 
-from cdk_gw_tools.cli.plugins_parser import set_plugings_actions_parsers
+from cdk_gw_tools.cli.gw_parsers.plugins import set_plugings_actions_parsers
+from cdk_gw_tools.cli.gw_parsers.user_mappings import (
+    set_gw_user_mappings_actions_parsers,
+)
 from cdk_gw_tools.cli.vclusters_parser import set_vclusters_actions_parsers
 
 
@@ -54,5 +57,13 @@ def set_parser():
         dest="action", help="Manage plugins actions"
     )
     set_plugings_actions_parsers(plugins_subparsers)
+
+    gw_user_mappings_parser = cmd_parser.add_parser(
+        name="user-mappings", help="Manage user mappings at the GW level"
+    )
+    gw_user_mappings_subparsers = gw_user_mappings_parser.add_subparsers(
+        dest="action", help="Manage GW user mappings actions"
+    )
+    set_gw_user_mappings_actions_parsers(gw_user_mappings_subparsers)
 
     return main_parser

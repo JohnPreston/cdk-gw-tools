@@ -5,23 +5,11 @@
 
 from __future__ import annotations
 
-import re
-from copy import deepcopy
-from json import loads
-
-from cdk_proxy_api_client.common.logging import LOG
-from cdk_proxy_api_client.errors import (
-    GenericNotFound,
-    ProxyApiException,
-    ProxyGenericException,
-)
+from cdk_proxy_api_client.errors import GenericNotFound, ProxyGenericException
 from cdk_proxy_api_client.interceptors import Interceptors
 from cdk_proxy_api_client.plugins import Plugins
 from cdk_proxy_api_client.proxy_api import ProxyClient
-from cdk_proxy_api_client.vclusters import VirturalClusters
-from compose_x_common.compose_x_common import keyisset, set_else_none
-from importlib_resources import files as pkg_files
-from jsonschema import validate
+from compose_x_common.compose_x_common import keyisset
 
 
 def set_update_interceptors(proxy: ProxyClient, vcluster_name: str, interceptors: dict):

@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "id": "user-mappings.spec.json",
+  "$id": "user-mappings.spec.json",
+  "title": "User Mappings config",
+  "description": "Specification for user-mapping management",
+  "type": "object",
+  "additionalProperties": false,
+  "patternProperties": {
+    "x-": {}
+  },
+  "properties": {
+    "userMappings": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-zA-Z0-9_\\-\\.]+$": {
+          "type": "object",
+          "description": "vCluster identities user-mappings",
+          "required": ["identities"],
+          "properties": {
+            "identities": {
+              "$ref": "#/definitions/identities"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "identities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

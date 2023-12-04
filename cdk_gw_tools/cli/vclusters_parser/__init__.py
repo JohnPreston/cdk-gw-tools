@@ -5,9 +5,8 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 
-from cdk_gw_tools.cli.user_mappings_parser import set_user_mappings_actions_parsers
-
-from .vclusters_interceptors_subparser import set_interceptors_actions_parsers
+from .interceptors import set_interceptors_actions_parsers
+from .user_mappings import set_user_mappings_actions_parsers
 
 VCLUSTER_PARSER = ArgumentParser(add_help=False)
 VCLUSTER_PARSER.add_argument(

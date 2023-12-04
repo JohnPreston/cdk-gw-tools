@@ -17,8 +17,11 @@
       "patternProperties": {
         "^[a-zA-Z0-9_\\-\\.]+$": {
           "type": "object",
+          "additionalProperties": false,
           "description": "vCluster identities user-mappings",
-          "required": ["identities"],
+          "required": [
+            "identities"
+          ],
           "properties": {
             "identities": {
               "$ref": "#/definitions/identities"

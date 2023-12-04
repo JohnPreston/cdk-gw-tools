@@ -334,6 +334,19 @@ files = [
 ]
 
 [[package]]
+name = "dacite"
+version = "1.8.1"
+description = "Simple creation of data classes from dictionaries."
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "dacite-1.8.1-py3-none-any.whl", hash = "sha256:cc31ad6fdea1f49962ea42db9421772afe01ac5442380d9a99fcf3d188c61afe"},
+]
+
+[package.extras]
+dev = ["black", "coveralls", "mypy", "pre-commit", "pylint", "pytest (>=5)", "pytest-benchmark", "pytest-cov"]
+
+[[package]]
 name = "datamodel-code-generator"
 version = "0.25.1"
 description = "Datamodel Code Generator"
@@ -1271,4 +1284,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "1b8922cabd3d89768ee312d2602b2206ba95b392c1a2da4c48a72e8769e3dcc0"
+content-hash = "25dc58ccfecfe0e90afef6f341ae3817d1b698c8a3c4be6a42095b0958970dda"

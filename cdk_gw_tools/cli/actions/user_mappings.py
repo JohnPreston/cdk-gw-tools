@@ -15,6 +15,7 @@ from cdk_gw_tools.cli_tools import load_config_file
 from cdk_gw_tools.cli_tools.user_mappings_tools import (
     create_export_config,
     import_mappings_from_file,
+    validate_identities_are_unique,
 )
 
 
@@ -29,6 +30,9 @@ def gw_user_mappings_actions(proxy: ProxyClient, action: str, **kwargs) -> dict:
         req = import_mappings_from_file(
             vclusters, user_mappings, config, keyisset("remove_unset", kwargs)
         )
+    elif action == "validate":
+        config = load_config_file(kwargs["import_file"])
+        validate_identities_are_unique(config)
     else:
         raise NotImplementedError(f"Action {action} is not implemented yet.")
     return asdict(req)

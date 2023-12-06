@@ -30,11 +30,21 @@ def create_export_config(
     return from_dict(UserMappingsConfig, mappings_config)
 
 
+def validate_identities_are_unique(config: dict) -> UserMappingsConfig:
+    mappings_config = from_dict(UserMappingsConfig, config)
+    identities_recorded: list = []
+    for definition in mappings_config.userMappings.values():
+        for identity in definition.identities:
+            if identity in identities_recorded:
+                raise ValueError(f"Identity {identity} is defined multiple times.")
+            identities_recorded.append(identity)
+    return mappings_config
+
+
 def import_mappings_from_file(
     vclusters, user_mappings, config: dict, remove_unset: bool = False
 ) -> UserMappingsConfig:
-    mappings_config = from_dict(UserMappingsConfig, config)
-    _vclusters_list = vclusters.list_vclusters(as_list=True)["vclusters"]
+    mappings_config = validate_identities_are_unique(config)
 
     for vcluster_name, definition in mappings_config.userMappings.items():
         _existing_mappings = user_mappings.list_mappings(vcluster_name).json()

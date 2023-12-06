@@ -115,6 +115,7 @@ def import_from_tenants_include_dict(
                     "Not a valid regex. Skipping",
                 )
                 return
+
     if topics_include_pattern_regexes:
         for _include_pattern in topics_include_pattern_regexes:
             try:
@@ -198,7 +199,9 @@ def import_from_other_tenants(
     proxy: ProxyClient, import_config: dict, tenant_name: str
 ) -> None:
     """Allows to import existing topics from other tenants in read-only"""
-    tenants: list[str] = VirturalClusters(proxy).list_vclusters(as_list=True)
+    tenants: list[str] = VirturalClusters(proxy).list_vclusters(as_list=True)[
+        "vclusters"
+    ]
     exclude_list = set_else_none("exclude_regex", import_config, [])
     include_list = set_else_none("include_regex", import_config, [])
     processed_tenants: list[str] = []
@@ -246,22 +249,30 @@ def import_from_other_tenants(
 def propagate_tenant_mappings(
     tenant_mappings: VirturalClusters,
     mappings: list[dict],
-    tenant_name: str,
+    vcluster_name: str,
     ignore_conflicts: bool = False,
 ) -> None:
     for mapping in mappings:
-        print("MAPPINGS IMPORT", mapping)
         try:
             tenant_mappings.create_vcluster_topic_mapping(
-                tenant_name,
-                mapping["logicalTopicName"],
-                mapping["physicalTopicName"],
+                vcluster=vcluster_name,
+                logical_topic_name=mapping["logicalTopicName"],
+                physical_topic_name=mapping["physicalTopicName"],
                 read_only=keyisset("readOnly", mapping),
                 concentrated=keyisset("concentrated", mapping),
             )
+            LOG.debug(
+                "Successfully created mapping {} -> {}".format(
+                    mapping["logicalTopicName"], mapping["physicalTopicName"]
+                )
+            )
         except ProxyGenericException as error:
             if error.code == 409 and ignore_conflicts:
+                print(error)
                 pass
+        except Exception as error:
+            print("ERROR", error)
+            raise error
 
 
 def import_tenants_mappings(

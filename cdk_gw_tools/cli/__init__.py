@@ -22,7 +22,7 @@ from cdk_gw_tools.cli.actions.user_mappings import gw_user_mappings_actions
 from cdk_gw_tools.cli.actions.vclusters import vclusters_actions
 from cdk_gw_tools.cli.actions.vclusters.interceptors import interceptors_actions
 from cdk_gw_tools.cli.main_parser import set_parser
-from cdk_gw_tools.cli_tools.import_from_config import import_clients
+from cdk_gw_tools.cli_tools.import_from_config import import_client
 from cdk_gw_tools.common.logging import LOG
 
 
@@ -59,8 +59,7 @@ def main():
             url=_vars.pop("url"),
         )
     elif _args.profile_name:
-        _clients = import_clients(_args.config_file)
-        _client = _clients[_args.profile_name]
+        _client = import_client(_args.config_file, _args.profile_name)
     else:
         raise Exception(
             "You must either set --profile-name (possibly -c) or define --url, --username and --password"

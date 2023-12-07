@@ -29,9 +29,9 @@ DEFAULT_SCHEMA_PATH = pkg_files("cdk_gw_tools").joinpath(
 )
 
 
-def import_clients(
+def import_client(
     config_file: str, client: str = None, schema: dict = None
-) -> dict[str, ApiClient]:
+) -> ApiClient:
     """
     Function that will validate input from specification, then create Proxy client based on the configuration defined.
     It returns a mapping with the profile name and the associated client.
@@ -44,7 +44,6 @@ def import_clients(
     if client and client not in content:
         raise KeyError(f"Profile {client} not found in definition")
 
-    client_profiles: dict = {}
     for profile, profile_config in content.items():
         if client and profile != client:
             continue
@@ -55,14 +54,11 @@ def import_clients(
         password = set_else_none("Password", profile_config)
         aws_secrets_manager = set_else_none("AWSSecretsManager", profile_config)
         if username and password:
-            client_profiles[profile] = ApiClient(
-                url=url, username=username, password=password
-            )
+            return ApiClient(url=url, username=username, password=password)
         elif aws_secrets_manager:
-            client_profiles[profile] = set_profile_from_aws_secret(
-                profile, url, aws_secrets_manager
-            )
-    return client_profiles
+            return set_profile_from_aws_secret(profile, url, aws_secrets_manager)
+        else:
+            raise LookupError("Unable to define ApiClient based on configuration")
 
 
 def set_profile_from_aws_secret(profile: str, url: str, aws_config: dict) -> ApiClient:

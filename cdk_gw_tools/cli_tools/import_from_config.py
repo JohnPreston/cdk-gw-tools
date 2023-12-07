@@ -69,7 +69,11 @@ def set_profile_from_aws_secret(profile: str, url: str, aws_config: dict) -> Api
     """
     Uses the AWSSecretsManager configuration
     """
-    session = Session(profile_name=set_else_none("ProfileName", aws_config, "default"))
+    session = (
+        Session(profile_name=aws_config["ProfileName"])
+        if keyisset("ProfileName", aws_config)
+        else Session()
+    )
     client = session.client("secretsmanager")
     user = set_else_none("Username", aws_config)
     try:

@@ -1,0 +1,15 @@
+pluginClass: io.conduktor.gateway.interceptor.safeguard.ProducePolicyPlugin
+priority: 1001
+config:
+  topic: '.*'
+  acks:
+    value:
+      - -1
+    action: BLOCK
+  compressions:
+    value:
+      - GZIP
+      - LZ4
+      - ZSTD
+      - SNAPPY
+    action: BLOCK

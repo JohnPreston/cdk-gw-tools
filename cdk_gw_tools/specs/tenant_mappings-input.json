@@ -168,10 +168,6 @@
         "readOnly": {
           "type": "boolean",
           "description": "Whether the mapping is read-only on the topic. Cannot produce on topic."
-        },
-        "concentrated": {
-          "type": "boolean",
-          "description": "Whether the mapping is concentrated"
         }
       }
     }

@@ -5,8 +5,9 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 
-from .interceptors import set_interceptors_actions_parsers
-from .user_mappings import set_user_mappings_actions_parsers
+from cdk_gw_tools.cli.vclusters_parser.concentration_rules import (
+    set_vcluster_concentration_actions,
+)
 
 VCLUSTER_PARSER = ArgumentParser(add_help=False)
 VCLUSTER_PARSER.add_argument(
@@ -53,8 +54,7 @@ def set_vclusters_actions_parsers(vclusters_subparsers):
         default=False,
     )
     set_vcluster_mappings_actions(vclusters_subparsers)
-    set_interceptors_actions_parsers(vclusters_subparsers)
-    set_user_mappings_actions_parsers(vclusters_subparsers)
+    set_vcluster_concentration_actions(vclusters_subparsers)
 
 
 def set_vcluster_mappings_actions(vclusters_subparsers):
@@ -103,13 +103,6 @@ def set_vcluster_mappings_actions(vclusters_subparsers):
         help="Creates mapping in ReadOnly (defaults to Read-Write)",
     )
     create_parser.add_argument(
-        "--concentrated",
-        required=False,
-        default=False,
-        action="store_true",
-        help="Create concentrated mapping",
-    )
-    create_parser.add_argument(
         "--cluster-id",
         type=str,
         required=False,
@@ -122,7 +115,7 @@ def set_vcluster_mappings_actions(vclusters_subparsers):
         parents=[],
     )
     delete_topic_mapping_parser = mappings_subparsers.add_parser(
-        name="delete-topic-mapping",
+        name="delete",
         help="Delete a topic mapping for a given vCluster",
         parents=[],
     )
@@ -133,7 +126,7 @@ def set_vcluster_mappings_actions(vclusters_subparsers):
         help="Topic name as seen in the vCluster.",
     )
 
-    # Custom actions
+    # Custom cli_actions
     import_from_vclusters_parser = mappings_subparsers.add_parser(
         name="import-from-vclusters-config",
         help="Create topic mappings from existing vclusters",

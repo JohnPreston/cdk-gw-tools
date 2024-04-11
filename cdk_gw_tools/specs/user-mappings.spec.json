@@ -18,7 +18,7 @@
         "^[a-zA-Z0-9_\\-\\.]+$": {
           "type": "object",
           "additionalProperties": false,
-          "description": "vCluster identities user-mappings",
+          "description": "vCluster identities user-mappings.",
           "required": [
             "identities"
           ],
@@ -34,9 +34,45 @@
   "definitions": {
     "identities": {
       "type": "array",
+      "description": "Sets the username/principal only. The username and principal will use the same value.",
       "uniqueItems": true,
       "items": {
-        "type": "string"
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "$ref": "#/definitions/detailed_identity"
+          }
+        ]
+      }
+    },
+    "detailed_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "x-": {}
+      },
+      "required": [
+        "username"
+      ],
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "Human friendly username used for ACLs/Interceptors"
+        },
+        "principal": {
+          "type": "string",
+          "description": "The Identity ID (i.e. claims.sub value when using OAuth)"
+        },
+        "groups": {
+          "description": "List of groups to be mapped to the principal. Groups apply to all of GW, not just the vClusters",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        }
       }
     }
   }

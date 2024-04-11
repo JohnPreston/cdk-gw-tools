@@ -15,7 +15,7 @@ import yaml
 from boto3 import Session
 from cdk_proxy_api_client.client_wrapper import ApiClient
 from cdk_proxy_api_client.proxy_api import ProxyClient
-from cdk_proxy_api_client.vclusters import VirturalClusters
+from cdk_proxy_api_client.vclusters import VirtualClusters
 from compose_x_common.aws import get_assume_role_session
 from compose_x_common.compose_x_common import keyisset
 
@@ -197,7 +197,7 @@ def get_new_token_for_vcluster(
             url=CDK_API_ENDPOINT,
         )
         proxy_client = ProxyClient(api_client)
-        admin_client = VirturalClusters(proxy_client)
+        admin_client = VirtualClusters(proxy_client)
         logger.debug(admin_client.list_vclusters(as_list=True))
         token = admin_client.create_vcluster_user_token(
             vcluster=vcluster["vcluster"],

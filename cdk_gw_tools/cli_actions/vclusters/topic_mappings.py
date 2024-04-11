@@ -4,7 +4,7 @@ from os import path
 from typing import Union
 
 from cdk_proxy_api_client.proxy_api import ProxyClient
-from cdk_proxy_api_client.vclusters import VirturalClusters
+from cdk_proxy_api_client.vclusters import VirtualClusters
 from compose_x_common.compose_x_common import keyisset, set_else_none
 
 from cdk_gw_tools.cli_tools import load_config_file
@@ -33,10 +33,10 @@ def format_vcluster_mappings_list(
     return mappings_list
 
 
-def tenant_mappings_actions(
-    proxy: ProxyClient, vcluster: VirturalClusters, action: str, **kwargs
+def vcluster_mappings_actions(
+    proxy: ProxyClient, vcluster: VirtualClusters, action: str, **kwargs
 ):
-    """Manages actions for mappings vClusters actions"""
+    """Manages cli_actions for mappings vClusters cli_actions"""
 
     vcluster_name = set_else_none("vcluster_name", kwargs)
     if action == "list":
@@ -54,7 +54,6 @@ def tenant_mappings_actions(
             logical_topic_name=kwargs["logical_topic_name"],
             physical_topic_name=kwargs["physical_topic_name"],
             read_only=keyisset("ReadOnly", kwargs),
-            concentrated=keyisset("concentrated", kwargs),
             cluster_id=kwargs.get("cluster_id"),
         )
     elif action == "import-from-tenant":

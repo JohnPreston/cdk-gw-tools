@@ -7,7 +7,7 @@ from cdk_proxy_api_client.plugins import Plugins
 from cdk_proxy_api_client.proxy_api import ProxyClient
 from compose_x_common.compose_x_common import keyisset
 
-from cdk_gw_tools.cli import format_return
+from cdk_gw_tools.cli_actions.common import format_return
 
 
 @format_return

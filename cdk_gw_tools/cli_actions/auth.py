@@ -3,15 +3,21 @@
 
 from __future__ import annotations
 
-from cdk_proxy_api_client.vclusters import VirturalClusters
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from cdk_proxy_api_client.proxy_api import ProxyClient
+
+from cdk_proxy_api_client.vclusters import VirtualClusters
 from compose_x_common.compose_x_common import keyisset
 
 
-def auth_actions(vcluster: VirturalClusters, action: str, **kwargs):
-    """Manages actions for auth vClusters subparser"""
+def auth_actions(proxy_client: ProxyClient, action: str, **kwargs):
+    """Manages cli_actions for auth vClusters subparser"""
     username = kwargs.get("username") or kwargs["vcluster_name"]
     if action == "create":
-        req = vcluster.create_vcluster_user_token(
+        vcluster_client = VirtualClusters(proxy_client)
+        req = vcluster_client.create_vcluster_user_token(
             vcluster=kwargs.get("vcluster_name"),
             username=username,
             lifetime_in_seconds=int(kwargs.get("token_lifetime_in_seconds")),

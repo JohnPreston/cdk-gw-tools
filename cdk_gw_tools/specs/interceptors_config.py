@@ -9,7 +9,6 @@ from typing import Any, Dict, Optional
 
 @dataclass
 class InterceptorDefinition:
-    pluginClass: str
     priority: int
     config: Dict[str, Any]
 
@@ -39,6 +38,10 @@ class Interceptor:
     Allows to define the same interceptor and its overrides. Global can only be defined once, an
     """
 
+    pluginClass: Optional[str] = None
+    """
+    The plugin class to use for this interceptor. It has to be unique per name.
+    """
     gateway: Optional[InterceptorDefinition] = None
     """
     Global interceptor definition

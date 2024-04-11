@@ -1,8 +1,8 @@
 interceptors:
   defaultCreatePolicy:
+    pluginClass: io.conduktor.gateway.interceptor.safeguard.CreateTopicPolicyPlugin
     gateway:
       priority: 1001
-      pluginClass: io.conduktor.gateway.interceptor.safeguard.CreateTopicPolicyPlugin
       config:
         topic: '.*'
         numPartition:
@@ -19,7 +19,6 @@ interceptors:
       usernames:
         john:
           priority: 1002
-          pluginClass: io.conduktor.gateway.interceptor.safeguard.CreateTopicPolicyPlugin
           config:
             topic: '.*'
             numPartition:
@@ -36,7 +35,6 @@ interceptors:
       testing-concentration:
         definition:
           priority: 1002
-          pluginClass: io.conduktor.gateway.interceptor.safeguard.CreateTopicPolicyPlugin
           config:
             topic: '.*'
             numPartition:
@@ -51,8 +49,8 @@ interceptors:
 
 
   producerDynamicHeaderInjectionInterceptor:
+    pluginClass: io.conduktor.gateway.interceptor.DynamicHeaderInjectionPlugin
     gateway:
-      pluginClass: io.conduktor.gateway.interceptor.DynamicHeaderInjectionPlugin
       priority: 100
       config:
         topic: '(.*)'
@@ -63,8 +61,8 @@ interceptors:
           X-GW-APIKEYVERSION: "{{apiKeyVersion}}"
 
   defaultProducePolicy:
+    pluginClass: io.conduktor.gateway.interceptor.safeguard.ProducePolicyPlugin
     gateway:
-      pluginClass: io.conduktor.gateway.interceptor.safeguard.ProducePolicyPlugin
       priority: 1001
       config:
         topic: '.*'

@@ -1,0 +1,81 @@
+interceptors:
+  defaultCreatePolicy:
+    gateway:
+      priority: 1001
+      pluginClass: io.conduktor.gateway.interceptor.safeguard.CreateTopicPolicyPlugin
+      config:
+        topic: '.*'
+        numPartition:
+          min: 1
+          max: 2
+          action: BLOCK
+        replicationFactor:
+          min: 3
+          max: 3
+          action: OVERRIDE
+          overrideValue: 3
+
+    passthrough:
+      usernames:
+        john:
+          priority: 1002
+          pluginClass: io.conduktor.gateway.interceptor.safeguard.CreateTopicPolicyPlugin
+          config:
+            topic: '.*'
+            numPartition:
+              min: 1
+              max: 3
+              action: BLOCK
+            replicationFactor:
+              min: 3
+              max: 3
+              action: OVERRIDE
+              overrideValue: 3
+
+    vclusters:
+      testing-concentration:
+        definition:
+          priority: 1002
+          pluginClass: io.conduktor.gateway.interceptor.safeguard.CreateTopicPolicyPlugin
+          config:
+            topic: '.*'
+            numPartition:
+              min: 1
+              max: 4
+              action: BLOCK
+            replicationFactor:
+              min: 3
+              max: 3
+              action: OVERRIDE
+              overrideValue: 3
+
+
+  producerDynamicHeaderInjectionInterceptor:
+    gateway:
+      pluginClass: io.conduktor.gateway.interceptor.DynamicHeaderInjectionPlugin
+      priority: 100
+      config:
+        topic: '(.*)'
+        headers:
+          X-GW-VCLUSTER: "{{vcluster}}"
+          X-GW-CLIENTID: "{{clientId}}"
+          X-GW-USER: "{{user}}"
+          X-GW-APIKEYVERSION: "{{apiKeyVersion}}"
+
+  defaultProducePolicy:
+    gateway:
+      pluginClass: io.conduktor.gateway.interceptor.safeguard.ProducePolicyPlugin
+      priority: 1001
+      config:
+        topic: '.*'
+        acks:
+          value:
+          - -1
+          action: BLOCK
+        compressions:
+          value:
+          - GZIP
+          - LZ4
+          - ZSTD
+          - SNAPPY
+          action: BLOCK

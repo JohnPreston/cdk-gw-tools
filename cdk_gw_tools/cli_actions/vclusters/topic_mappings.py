@@ -65,7 +65,7 @@ def vcluster_mappings_actions(
             "import_from_tenant": {"include_regex": [rf"^{source_tenant}$"]},
         }
         req = import_tenants_mappings(proxy, content, vcluster_name)
-    elif action == "delete-topic-mapping":
+    elif action == "delete":
         to_delete = kwargs.pop("logicalTopicName")
         req = vcluster.delete_vcluster_topic_mapping(
             vcluster=vcluster_name, logical_topic_name=to_delete

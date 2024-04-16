@@ -258,8 +258,7 @@ def propagate_tenant_mappings(
                 vcluster=vcluster_name,
                 logical_topic_name=mapping["logicalTopicName"],
                 physical_topic_name=mapping["physicalTopicName"],
-                read_only=keyisset("readOnly", mapping),
-                concentrated=keyisset("concentrated", mapping),
+                read_only=keyisset("readOnly", mapping)
             )
             LOG.debug(
                 "Successfully created mapping {} -> {}".format(

@@ -133,13 +133,13 @@ crt = ["awscrt (==0.19.19)"]
 
 [[package]]
 name = "cdk-proxy-api-client"
-version = "3.0.0rc2"
+version = "3.0.0"
 description = "Conduktor Proxy API Client"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "cdk_proxy_api_client-3.0.0rc2-py3-none-any.whl", hash = "sha256:8f2c867cb70da95f687b71db517941b2bce2d5e4b40fd3c39391076675f760d8"},
-    {file = "cdk_proxy_api_client-3.0.0rc2.tar.gz", hash = "sha256:614b2a9a5bf97bf8df6ee0fe944401e596170526b4f3c28308dc5723d0b7b7e9"},
+    {file = "cdk_proxy_api_client-3.0.0-py3-none-any.whl", hash = "sha256:18eb36eadb8929b982f4a6cb343a5a043a7c0933566e5eaa83a2cdb215f29adb"},
+    {file = "cdk_proxy_api_client-3.0.0.tar.gz", hash = "sha256:d3e59d6d31d40a122863319584e91ddff9820b217ab004dcd1f9675cf4cc3135"},
 ]
 
 [package.dependencies]
@@ -1344,4 +1344,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "8d9c4293512863ac7dbf985799a7ac3ec84d9cce81d5805add800871b761b189"
+content-hash = "46b28846a5550f458556f98383deec6e187b8c6a35ba2088a4d1eff916ac0c79"

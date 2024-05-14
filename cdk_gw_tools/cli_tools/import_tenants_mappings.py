@@ -269,8 +269,14 @@ def propagate_tenant_mappings(
             if error.code == 409 and ignore_conflicts:
                 print(error)
                 pass
+            elif error.code == 400:
+                LOG.error(error.details["message"])
+                pass
+            else:
+                print("Unexpected 4xx error", error.details["message"])
+                raise error
         except Exception as error:
-            print("ERROR", error)
+            print("Unexpected error", error)
             raise error
 
 

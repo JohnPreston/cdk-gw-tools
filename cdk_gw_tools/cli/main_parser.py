@@ -6,9 +6,12 @@ from __future__ import annotations
 from argparse import ArgumentParser
 from os import environ
 
-from cdk_gw_tools.cli.gw_parsers.plugins import set_plugings_actions_parsers
-from cdk_gw_tools.cli.gw_parsers.user_mappings import (
+from cdk_gw_tools.cli.auth import set_auth_actions
+from cdk_gw_tools.cli.interceptors import set_interceptors_actions_parsers
+from cdk_gw_tools.cli.plugins import set_plugings_actions_parsers
+from cdk_gw_tools.cli.user_mappings import (
     set_gw_user_mappings_actions_parsers,
+    set_user_mappings_actions_parsers,
 )
 from cdk_gw_tools.cli.vclusters_parser import set_vclusters_actions_parsers
 
@@ -54,16 +57,30 @@ def set_parser():
 
     plugins_parser = cmd_parser.add_parser(name="plugins", help="Manage plugins")
     plugins_subparsers = plugins_parser.add_subparsers(
-        dest="action", help="Manage plugins actions"
+        dest="action", help="Manage plugins cli_actions"
     )
     set_plugings_actions_parsers(plugins_subparsers)
 
-    gw_user_mappings_parser = cmd_parser.add_parser(
-        name="user-mappings", help="Manage user mappings at the GW level"
+    interceptors_parser = cmd_parser.add_parser(
+        name="interceptors", help="Manage interceptors"
     )
-    gw_user_mappings_subparsers = gw_user_mappings_parser.add_subparsers(
-        dest="action", help="Manage GW user mappings actions"
+    interceptors_subparsers = interceptors_parser.add_subparsers(
+        dest="action", help="Manage plugins cli_actions"
     )
-    set_gw_user_mappings_actions_parsers(gw_user_mappings_subparsers)
+    set_interceptors_actions_parsers(interceptors_subparsers)
+    user_mappings_parser = cmd_parser.add_parser(
+        name="user-mappings", help="Manage user-mappings"
+    )
+    user_mappings_subparsers = user_mappings_parser.add_subparsers(
+        dest="action", help="Manage user-mappings cli_actions"
+    )
+    set_user_mappings_actions_parsers(user_mappings_subparsers)
+    set_gw_user_mappings_actions_parsers(user_mappings_subparsers)
+
+    auth_parser = cmd_parser.add_parser(name="auth", help="Manage user-mappings")
+    auth_subparsers = auth_parser.add_subparsers(
+        dest="action", help="Manage auth/credentials actions"
+    )
+    set_auth_actions(auth_subparsers)
 
     return main_parser

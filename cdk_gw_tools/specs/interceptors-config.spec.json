@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "id": "interceptors.spec.json",
+  "$id": "interceptors.spec.json",
+  "title": "GW Interceptors config",
+  "description": "Specification for GW Interceptors config file",
+  "type": "object",
+  "additionalProperties": false,
+  "patternProperties": {
+    "x-": {}
+  },
+  "properties": {
+    "interceptors": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-zA-Z0-9]+$": {
+          "type": "object",
+          "additionalProperties": false,
+          "$ref": "#/definitions/interceptor"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "interceptor_definition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "priority",
+        "config"
+      ],
+      "properties": {
+        "priority": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "config": {
+          "type": "object"
+        }
+      }
+    },
+    "interceptor": {
+      "type": "object",
+      "description": "Allows to define the same interceptor and its overrides. Global can only be defined once, an",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "pluginClass": {
+          "type": "string",
+          "description": "The plugin class to use for this interceptor. It has to be unique per name."
+        },
+        "gateway": {
+          "$ref": "#/definitions/interceptor_definition",
+          "description": "Global interceptor definition"
+        },
+        "passthrough": {
+          "$ref": "#/definitions/interceptor_context",
+          "description": "Interceptor override for GW passthrough."
+        },
+        "vclusters": {
+          "type": "object",
+          "description": "Configuration override for vClusters",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[a-zA-Z0-9]+$": {
+              "$ref": "#/definitions/interceptor_context"
+            }
+          }
+        }
+      }
+    },
+    "interceptor_context": {
+      "type": "object",
+      "properties": {
+        "definition": {
+          "ref": "#/definitions/interceptor_definition",
+          "description": "Override definition for all entities within the context."
+        },
+        "groups": {
+          "$ref": "#/definitions/target_identity",
+          "description": "Override definition to apply to groups within the context."
+        },
+        "usernames": {
+          "$ref": "#/definitions/target_identity",
+          "description": "Override definition to apply to usernames within the context."
+        }
+      }
+    },
+    "target_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-zA-Z0-9]+$": {
+          "$ref": "#/definitions/interceptor_definition",
+          "description": "Override definition for the given identity within context."
+        }
+      }
+    }
+  }
+}
